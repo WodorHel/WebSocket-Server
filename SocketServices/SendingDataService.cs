@@ -1,10 +1,7 @@
 ﻿using WS.SocketClients;
 using WS.SocketServices.EventArguments;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net.Sockets;
 
 namespace WS.SocketServices
 {
@@ -12,11 +9,6 @@ namespace WS.SocketServices
     {
         public event EventHandler<DataSentEventArgs> SentData;
         public event EventHandler<DisconnectedEventArgs> Disconnected;
-
-        public SendingDataService()
-        {
-
-        }
 
         public void SendData(Client client, byte[] data)
         {
@@ -26,10 +18,14 @@ namespace WS.SocketServices
             {
                 clientSocket.BeginSend(data, 0, data.Length, 0, new AsyncCallback(EndSendData), client);
             }
-            catch(Exception ex)
+            catch (ObjectDisposedException)
+            {
+                if (!client.Closed)
+                    throw;
+            }
+            catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(client, ex));
-                return;
             }
         }
 
@@ -41,14 +37,17 @@ namespace WS.SocketServices
             try
             {
                 sentBytes = client.Socket.EndSend(ar);
+                SentData(this, new DataSentEventArgs(client, sentBytes));
             }
-            catch(Exception ex)
+            catch (ObjectDisposedException)
+            {
+                if (!client.Closed)
+                    throw;
+            }
+            catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(client, ex));
-                return;
             }
-
-            SentData(this, new DataSentEventArgs(client, sentBytes));
         }
     }
 }

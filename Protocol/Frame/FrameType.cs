@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace WS.Protocol.Frame
+﻿namespace WS.Protocol.Frame
 {
-    enum FrameType : byte
+    public enum FrameType : byte
     {
         None = 0x00,
         Message = 0x01,

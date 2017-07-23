@@ -1,9 +1,5 @@
 ﻿using WS.SocketClients;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WS.SocketServices.EventArguments
 {
@@ -15,12 +11,12 @@ namespace WS.SocketServices.EventArguments
 
         public DisconnectedEventArgs(Client client)
         {
-            this.Client = client;
+            Client = client;
         }
 
         public DisconnectedEventArgs(Client client, Exception exception) : this(client)
         {
-            this.Exception = exception;
+            Exception = exception;
         }
     }
 }

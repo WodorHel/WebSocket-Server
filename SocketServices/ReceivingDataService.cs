@@ -1,11 +1,7 @@
 ﻿using WS.SocketClients;
 using WS.SocketServices.EventArguments;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WS.SocketServices
 {
@@ -13,11 +9,6 @@ namespace WS.SocketServices
     {
         public event EventHandler<DataReceivedEventArgs> ReceivedData;
         public event EventHandler<DisconnectedEventArgs> Disconnected;
-
-        public ReceivingDataService()
-        {
-
-        }
 
         public void ReceiveData(Client client)
         {
@@ -30,12 +21,12 @@ namespace WS.SocketServices
             }
             catch (ObjectDisposedException)
             {
-                return;
+                if (!client.Closed)
+                    throw;
             }
-            catch(Exception ex)
+            catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(client, ex));
-                return;
             }
         }
 
@@ -47,21 +38,21 @@ namespace WS.SocketServices
             try
             {
                 receivedBytes = client.Socket.EndReceive(ar);
+
+                if (receivedBytes == 0)
+                    Disconnected(this, new DisconnectedEventArgs(client));
+                else
+                    ReceivedData(this, new DataReceivedEventArgs(client, receivedBytes));
             }
             catch (ObjectDisposedException)
             {
-                return;
+                if (!client.Closed)
+                    throw;
             }
-            catch (Exception ex)
+            catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(client, ex));
-                return;
             }
-
-            if (receivedBytes == 0)
-                Disconnected(this, new DisconnectedEventArgs(client));
-            else
-                ReceivedData(this, new DataReceivedEventArgs(client, receivedBytes));
         }
     }
 }

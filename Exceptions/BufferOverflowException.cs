@@ -1,14 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.Serialization;
 
 namespace WS.Exceptions
 {
+    [Serializable]
     class BufferOverflowException : Exception
     {
-        public BufferOverflowException() : base()
+        public BufferOverflowException()
+        {
+
+        }
+
+        public BufferOverflowException(string message) : base(message)
+        {
+
+        }
+
+        public BufferOverflowException(string message, Exception innerException) : base(message, innerException)
+        {
+
+        }
+
+        protected BufferOverflowException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
 
         }

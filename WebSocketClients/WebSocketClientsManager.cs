@@ -1,38 +1,39 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WS.WebSocketClients
 {
     class WebSocketClientsManager
     {
-        List<WebSocketClient> webSocketClients;
+        IDictionary<string, WebSocketClient> _webSocketClients;
 
         public WebSocketClientsManager()
         {
-            webSocketClients = new List<WebSocketClient>();
+            _webSocketClients = new ConcurrentDictionary<string, WebSocketClient>();
         }
 
         public void Add(WebSocketClient client)
         {
-            webSocketClients.Add(client);
+            _webSocketClients.Add(client.ID, client);
         }
 
         public void Remove(WebSocketClient client)
         {
-            webSocketClients.Remove(client);
+            _webSocketClients.Remove(client.ID);
         }
 
-        public WebSocketClient Get(String id)
+        public WebSocketClient Get(string id)
         {
-            return webSocketClients.FirstOrDefault(p => p.ID == id);
+            if (!Exists(id))
+                return null;
+
+            return _webSocketClients[id];
         }
 
-        public bool Exists(String id)
+        public bool Exists(string id)
         {
-            return webSocketClients.Exists(p => p.ID == id);
+            return _webSocketClients.ContainsKey(id);
         }
     }
 }

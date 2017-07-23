@@ -1,13 +1,12 @@
 ﻿using WS.SocketClients;
 using WS.SocketServices;
+using WS.SocketServices.ClientInformations;
 using WS.SocketServices.EventArguments;
 using WS.WebSocketEventArguments;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,16 +14,17 @@ namespace WS
 {
     class ServerListener
     {
-        Socket socket;
-        Task loop;
+        Socket _socket;
+        Task _loop;
 
-        ClientsManager clientsManager;
-        ConnectingService newConnectionService;
-        ReceivingDataService receiveDataService;
-        SendingDataService sendDataService;
+        ClientsManager _clientsManager;
+        ConnectingService _newConnectionService;
+        ReceivingDataService _receiveDataService;
+        SendingDataService _sendDataService;
+        ClientInfoGenerator _clientInfoGenerator;
 
-        int bufferSize;
-        static ManualResetEvent loopEvent;
+        int _bufferSize;
+        static ManualResetEvent _loopEvent;
 
         public event EventHandler<WebSocketConnectedEventArgs> WebSocketConnected;
         public event EventHandler<WebSocketDataReceivedEventArgs> WebSocketDataReceived;
@@ -34,85 +34,98 @@ namespace WS
 
         public ServerListener(int bufferSize)
         {
-            this.bufferSize = bufferSize;
+            _bufferSize = bufferSize;
 
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            loop = new Task(Loop);
-            loopEvent = new ManualResetEvent(false);
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            _loop = new Task(Loop);
 
-            clientsManager = new ClientsManager();
-            newConnectionService = new ConnectingService();
-            receiveDataService = new ReceivingDataService();
-            sendDataService = new SendingDataService();
+            _loopEvent = new ManualResetEvent(false);
 
-            newConnectionService.Connected += OnConnected;
-            newConnectionService.Disconnected += OnDisconnected;
+            _clientsManager = new ClientsManager();
+            _newConnectionService = new ConnectingService();
+            _receiveDataService = new ReceivingDataService();
+            _sendDataService = new SendingDataService();
+            _clientInfoGenerator = new ClientInfoGenerator();
 
-            receiveDataService.ReceivedData += OnReceivedData;
-            receiveDataService.Disconnected += OnDisconnected;
+            _newConnectionService.Connected += OnConnected;
+            _newConnectionService.Disconnected += OnDisconnected;
 
-            sendDataService.SentData += OnSentData;
-            sendDataService.Disconnected += OnDisconnected;
+            _receiveDataService.ReceivedData += OnReceivedData;
+            _receiveDataService.Disconnected += OnDisconnected;
+
+            _sendDataService.SentData += OnSentData;
+            _sendDataService.Disconnected += OnDisconnected;
 
             Shutdown = true;
         }
 
         public void StartListening(IPEndPoint endPoint)
         {
-            socket.Bind(endPoint);
-            socket.Listen(128);
+            _socket.Bind(endPoint);
+            _socket.Listen(128);
 
             Shutdown = false;
-            loop.Start();
+            _loop.Start();
         }
 
         public void StopListening()
         {
             Shutdown = true;
-            socket.Close();
+            _socket.Close();
         }
 
-        public void SendData(String clientID, byte[] data)
+        public void SendData(string clientID, byte[] data)
         {
-            var client = clientsManager.Get(clientID);
-            sendDataService.SendData(client, data);
+            var client = _clientsManager.Get(clientID);
+            _sendDataService.SendData(client, data);
         }
 
-        public void CloseConnection(String clientID)
+        public void CloseConnection(string clientID)
         {
             CloseConnection(clientID, null);
         }
 
-        public void CloseConnection(String clientID, Exception ex)
+        public void CloseConnection(string clientID, Exception ex)
         {
-            var client = clientsManager.Get(clientID);
-            client.Socket.Close();
-            clientsManager.Remove(client);
+            var client = _clientsManager.Get(clientID);
+            if (client == null)
+                return;
+
+            client.Close();
+            _clientsManager.Remove(client);
 
             OnDisconnected(this, new DisconnectedEventArgs(client, ex));
         }
 
+        public ClientInfo GetClientInfo(string clientID)
+        {
+            var client = _clientsManager.Get(clientID);
+            if (client == null)
+                return null;
+
+            return _clientInfoGenerator.Get(client);
+        }
+
         void Loop()
         {
-            while(!Shutdown)
+            while (!Shutdown)
             {
-                loopEvent.Reset();
-                newConnectionService.BeginConnection(socket);
-                loopEvent.WaitOne();
-            }    
+                _loopEvent.Reset();
+                _newConnectionService.BeginConnection(_socket);
+                _loopEvent.WaitOne();
+            }
         }
 
         void OnConnected(object sender, ConnectedEventArgs args)
         {
-            var client = new Client(args.ClientSocket, bufferSize);
-
-            clientsManager.Add(client);
-            receiveDataService.ReceiveData(client);
+            var client = new Client(args.ClientSocket, _bufferSize);
+            _clientsManager.Add(client);
 
             var connectionArgs = new WebSocketConnectedEventArgs(client.ID);
             WebSocketConnected(this, connectionArgs);
 
-            loopEvent.Set();
+            _receiveDataService.ReceiveData(client);
+            _loopEvent.Set();
         }
 
         void OnReceivedData(object sender, DataReceivedEventArgs args)
@@ -123,7 +136,7 @@ namespace WS
             var receivedDataArgs = new WebSocketDataReceivedEventArgs(client.ID, receivedData);
             WebSocketDataReceived(this, receivedDataArgs);
 
-            receiveDataService.ReceiveData(client);
+            _receiveDataService.ReceiveData(client);
         }
 
         void OnSentData(object sender, DataSentEventArgs args)
@@ -134,7 +147,7 @@ namespace WS
 
         void OnDisconnected(object sender, DisconnectedEventArgs args)
         {
-            clientsManager.Remove(args.Client);
+            _clientsManager.Remove(args.Client);
 
             var disconnectArgs = new WebSocketDisconnectedEventArgs(args.Client.ID, args.Exception);
             WebSocketDisconnected(this, disconnectArgs);

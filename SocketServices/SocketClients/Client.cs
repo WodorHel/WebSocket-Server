@@ -1,23 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WS.SocketClients
 {
     class Client
     {
-        public String ID { get; private set; }
+        public string ID { get; private set; }
         public Socket Socket { get; private set; }
         public byte[] Buffer { get; private set; }
+        public DateTime JoinTime { get; private set; }
+
+        public bool Closed { get; set; }
 
         public Client(Socket socket, int bufferSize)
         {
-            this.ID = Guid.NewGuid().ToString();
-            this.Buffer = new byte[bufferSize];
-            this.Socket = socket;
+            ID = Guid.NewGuid().ToString();
+            Buffer = new byte[bufferSize];
+            Socket = socket;
+
+            JoinTime = DateTime.Now;
+            Closed = false;
+        }
+
+        public void Close()
+        {
+            Closed = true;
+            Socket.Close();
         }
     }
 }

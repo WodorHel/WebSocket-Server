@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace WS.Protocol.Frame
+﻿namespace WS.Protocol.Frame
 {
     class FramesManager
     {
-        FrameSerializer serializer;
-        FrameDeserializer deserializer;
+        FrameSerializer _serializer;
+        FrameDeserializer _deserializer;
 
         public FramesManager()
         {
-            serializer = new FrameSerializer();
-            deserializer = new FrameDeserializer();
+            _serializer = new FrameSerializer();
+            _deserializer = new FrameDeserializer();
         }
 
         public byte[] Serialize(byte[] data, FrameType type)
@@ -24,12 +18,12 @@ namespace WS.Protocol.Frame
             frame.FIN = true;
             frame.Mask = false;
 
-            return serializer.GetBytes(frame);
+            return _serializer.GetBytes(frame);
         }
 
         public byte[] Deserialize(byte[] data, out DecryptResult result, out FrameType type, out int parsedBytes)
         {
-            var frame = deserializer.GetFrame(data, out result);
+            var frame = _deserializer.GetFrame(data, out result);
             if (result != DecryptResult.SuccessWithFIN && result != DecryptResult.SuccessWithoutFIN)
             {
                 parsedBytes = 0;

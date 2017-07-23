@@ -1,11 +1,6 @@
-﻿using WS.SocketClients;
-using WS.SocketServices.EventArguments;
+﻿using WS.SocketServices.EventArguments;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WS.SocketServices
 {
@@ -14,18 +9,13 @@ namespace WS.SocketServices
         public event EventHandler<ConnectedEventArgs> Connected;
         public event EventHandler<DisconnectedEventArgs> Disconnected;
 
-        public ConnectingService()
-        {
-
-        }
-
         public void BeginConnection(Socket server)
         {
             try
             {
                 server.BeginAccept(new AsyncCallback(AcceptNewConnection), server);
             }
-            catch(Exception ex)
+            catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(null, ex));
             }
@@ -39,14 +29,12 @@ namespace WS.SocketServices
             try
             {
                 clientSocket = server.EndAccept(ar);
+                Connected(this, new ConnectedEventArgs(clientSocket));
             }
-            catch(Exception ex)
+            catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(null, ex));
-                return;
             }
-
-            Connected(this, new ConnectedEventArgs(clientSocket));
         }
     }
 }

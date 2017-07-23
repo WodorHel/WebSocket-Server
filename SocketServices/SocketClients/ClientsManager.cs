@@ -1,38 +1,39 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WS.SocketClients
 {
     class ClientsManager
     {
-        List<Client> clients;
+        IDictionary<string, Client> _clients;
 
         public ClientsManager()
         {
-            clients = new List<Client>();
+            _clients = new ConcurrentDictionary<string, Client>();
         }
 
         public void Add(Client client)
         {
-            clients.Add(client);
+            _clients.Add(client.ID, client);
         }
 
         public void Remove(Client client)
         {
-            clients.Remove(client);
+            _clients.Remove(client.ID);
         }
 
-        public Client Get(String id)
+        public Client Get(string id)
         {
-            return clients.FirstOrDefault(p => p.ID == id);
+            if (!Exists(id))
+                return null;
+
+            return _clients[id];
         }
 
-        public bool Exists(String id)
+        public bool Exists(string id)
         {
-            return clients.Exists(p => p.ID == id);
+            return _clients.ContainsKey(id);
         }
     }
 }

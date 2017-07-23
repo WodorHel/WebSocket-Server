@@ -1,19 +1,23 @@
-﻿using WS.Exceptions;
+﻿using WS.CommandsExecutors;
+using WS.Exceptions;
 using WS.Protocol.Frame;
 using WS.Protocol.Handshake;
+using WS.SocketServices.ClientInformations;
 using WS.WebSocketClients;
 using WS.WebSocketEventArguments;
 using System;
 using System.Net;
+using System.Text;
 
 namespace WS
 {
     public class WebSocketServer
     {
-        ServerListener server;
-        WebSocketClientsManager webSocketClientsManager;
-        HandshakeResponseGenerator handshakeResponseGenerator;
-        FramesManager framesManager;
+        ServerListener _server;
+        WebSocketClientsManager _webSocketClientsManager;
+        HandshakeResponseGenerator _handshakeResponseGenerator;
+        FramesManager _framesManager;
+        CommandExecutorFactory _commandsExecutorFactory;
 
         /// <summary>
         /// Buffer size for each client. Default is 8192
@@ -47,17 +51,18 @@ namespace WS
 
         public WebSocketServer(int bufferSize)
         {
-            this.BufferSize = bufferSize;
+            BufferSize = bufferSize;
 
-            server = new ServerListener(BufferSize);
-            webSocketClientsManager = new WebSocketClientsManager();
-            handshakeResponseGenerator = new HandshakeResponseGenerator();
-            framesManager = new FramesManager();
+            _server = new ServerListener(BufferSize);
+            _webSocketClientsManager = new WebSocketClientsManager();
+            _handshakeResponseGenerator = new HandshakeResponseGenerator();
+            _framesManager = new FramesManager();
+            _commandsExecutorFactory = new CommandExecutorFactory();
 
-            server.WebSocketConnected += OnWebSocketConnected;
-            server.WebSocketDataReceived += OnWebSocketDataReceived;
-            server.WebSocketDataSent += OnWebSocketDataSent;
-            server.WebSocketDisconnected += OnWebSocketDisconnected;
+            _server.WebSocketConnected += OnWebSocketConnected;
+            _server.WebSocketDataReceived += OnWebSocketDataReceived;
+            _server.WebSocketDataSent += OnWebSocketDataSent;
+            _server.WebSocketDisconnected += OnWebSocketDisconnected;
         }
 
         /// <summary>
@@ -66,28 +71,46 @@ namespace WS
         public void Open(IPAddress address, int port)
         {
             var endPoint = new IPEndPoint(address, port);
-            server.StartListening(endPoint);
+            _server.StartListening(endPoint);
         }
-        
+
         /// <summary>
         /// Closes WebSocket server
         /// </summary>
         public void Close()
         {
-            server.StopListening();
+            _server.StopListening();
         }
 
         /// <summary>
         /// Sends data (as WebSocket frame) to connected client with the specified id.
         /// Returns false if clientID not exists.
         /// </summary>
-        public bool SendData(String clientID, byte[] data)
+        public bool SendData(string clientID, byte[] data)
         {
-            if (!webSocketClientsManager.Exists(clientID))
+            return SendData(clientID, data, FrameType.Message);
+        }
+
+        /// <summary>
+        /// Sends text (as WebSocket frame) to connected client with the specified id.
+        /// Returns false if clientID not exists.
+        /// </summary>
+        public bool SendData(string clientID, string text)
+        {
+            return SendData(clientID, ASCIIEncoding.UTF8.GetBytes(text), FrameType.Message);
+        }
+
+        /// <summary>
+        /// Sends data (as WebSocket frame with specified type) to connected client with the specified id.
+        /// Returns false if clientID not exists.
+        /// </summary>
+        public bool SendData(string clientID, byte[] data, FrameType type)
+        {
+            if (!_webSocketClientsManager.Exists(clientID))
                 return false;
 
-            var frameBytes = framesManager.Serialize(data, FrameType.Message);
-            server.SendData(clientID, frameBytes);
+            var frameBytes = _framesManager.Serialize(data, type);
+            _server.SendData(clientID, frameBytes);
             return true;
         }
 
@@ -95,31 +118,42 @@ namespace WS
         /// Sends raw data (without creating WebSocket frame) to connected client with the specified id.
         /// Returns false if clientID not exists.
         /// </summary>
-        public void SendRawData(String clientID, byte[] data)
+        public void SendRawData(string clientID, byte[] data)
         {
-            server.SendData(clientID, data);
+            _server.SendData(clientID, data);
         }
 
-        public void DisconnectClient(String clientID)
+        /// <summary>
+        /// Returns informations about client with specified id. If not exists, returns null.
+        /// </summary>
+        public ClientInfo GetClientInfo(string clientID)
         {
-            server.CloseConnection(clientID);
+            return _server.GetClientInfo(clientID);
+        }
+
+        /// <summary>
+        /// Disconnects client with specified id.
+        /// </summary>
+        public void DisconnectClient(string clientID)
+        {
+            _server.CloseConnection(clientID);
         }
 
         void OnWebSocketConnected(object sender, WebSocketConnectedEventArgs args)
         {
             var webSocketClient = new WebSocketClient(args.ClientID, BufferSize);
-            webSocketClientsManager.Add(webSocketClient);
+            _webSocketClientsManager.Add(webSocketClient);
 
             WebSocketConnected?.Invoke(this, args);
         }
 
         void OnWebSocketDataReceived(object sender, WebSocketDataReceivedEventArgs args)
         {
-            var client = webSocketClientsManager.Get(args.ClientID);
+            var client = _webSocketClientsManager.Get(args.ClientID);
 
-            if(!client.AddToBuffer(args.Data))
+            if (!client.AddToBuffer(args.Data))
             {
-                server.CloseConnection(args.ClientID, new BufferOverflowException());
+                _server.CloseConnection(args.ClientID, new BufferOverflowException());
                 return;
             }
 
@@ -136,15 +170,15 @@ namespace WS
 
         void OnWebSocketDisconnected(object sender, WebSocketDisconnectedEventArgs args)
         {
-            var webSocketClient = webSocketClientsManager.Get(args.ClientID);
-            webSocketClientsManager.Remove(webSocketClient);
+            var webSocketClient = _webSocketClientsManager.Get(args.ClientID);
+            _webSocketClientsManager.Remove(webSocketClient);
 
             WebSocketDisconnected?.Invoke(this, args);
         }
 
         void DoHandshake(WebSocketClient client)
         {
-            var response = handshakeResponseGenerator.GetResponse(client.GetBufferData());
+            var response = _handshakeResponseGenerator.GetResponse(client.GetBufferData());
             if (response != null)
             {
                 SendRawData(client.ID, response);
@@ -161,32 +195,14 @@ namespace WS
             var decryptResult = DecryptResult.None;
             var frameType = FrameType.None;
             var parsedBytes = 0;
-            var message = framesManager.Deserialize(frame, out decryptResult, out frameType, out parsedBytes);
+            var message = _framesManager.Deserialize(frame, out decryptResult, out frameType, out parsedBytes);
 
             if (parsedBytes > 0)
             {
-                switch (frameType)
-                {
-                    case (FrameType.Message):
-                    {
-                        WebSocketDataReceived?.Invoke(this, new WebSocketDataReceivedEventArgs(client.ID, message));
-                        break;
-                    }
-                    case (FrameType.Disconnect):
-                    {
-                        server.CloseConnection(client.ID);
-                        break;
-                    }
-                    case (FrameType.Ping):
-                    {
-                        SendRawData(client.ID, framesManager.Serialize(message, FrameType.Pong));
-                        break;
-                    }
-                    case (FrameType.Pong):
-                    {
-                        break;
-                    }
-                }
+                var commandExecutor = _commandsExecutorFactory.Create(frameType);
+
+                if (commandExecutor.Do(this, client.ID, message))
+                    WebSocketDataReceived?.Invoke(this, new WebSocketDataReceivedEventArgs(client.ID, message));
 
                 client.RemoveFromBuffer(parsedBytes);
             }

@@ -1,9 +1,5 @@
 ﻿using WS.SocketClients;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WS.SocketServices.EventArguments
 {
@@ -14,8 +10,8 @@ namespace WS.SocketServices.EventArguments
 
         public DataSentEventArgs(Client client, int bytesSent)
         {
-            this.Client = client;
-            this.BytesSent = bytesSent;
+            Client = client;
+            BytesSent = bytesSent;
         }
     }
 }
