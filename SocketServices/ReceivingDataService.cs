@@ -1,14 +1,20 @@
-﻿using WS.SocketClients;
+﻿using WS.SocketServices.Clients;
 using WS.SocketServices.EventArguments;
 using System;
+using System.Linq;
 using System.Net.Sockets;
 
 namespace WS.SocketServices
 {
-    class ReceivingDataService
+    internal class ReceivingDataService
     {
         public event EventHandler<DataReceivedEventArgs> ReceivedData;
         public event EventHandler<DisconnectedEventArgs> Disconnected;
+
+        public void ReceiveData(Socket socket)
+        {
+            ReceiveData(new Client(socket, 1000));
+        }
 
         public void ReceiveData(Client client)
         {
@@ -21,12 +27,11 @@ namespace WS.SocketServices
             }
             catch (ObjectDisposedException)
             {
-                if (!client.Closed)
-                    throw;
+                //Do nothing, socket is already closed by WebSocket server
             }
             catch (SocketException ex)
             {
-                Disconnected(this, new DisconnectedEventArgs(client, ex));
+                Disconnected(this, new DisconnectedEventArgs(client.Socket, ex));
             }
         }
 
@@ -40,18 +45,17 @@ namespace WS.SocketServices
                 receivedBytes = client.Socket.EndReceive(ar);
 
                 if (receivedBytes == 0)
-                    Disconnected(this, new DisconnectedEventArgs(client));
+                    Disconnected(this, new DisconnectedEventArgs(client.Socket));
                 else
-                    ReceivedData(this, new DataReceivedEventArgs(client, receivedBytes));
+                    ReceivedData(this, new DataReceivedEventArgs(client.Socket, client.Buffer.Take(receivedBytes).ToArray()));
             }
             catch (ObjectDisposedException)
             {
-                if (!client.Closed)
-                    throw;
+                //Do nothing, socket is already closed by WebSocket server
             }
             catch (SocketException ex)
             {
-                Disconnected(this, new DisconnectedEventArgs(client, ex));
+                Disconnected(this, new DisconnectedEventArgs(client.Socket, ex));
             }
         }
     }

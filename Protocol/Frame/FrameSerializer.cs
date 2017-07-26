@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace WS.Protocol.Frame
 {
-    class FrameSerializer
+    internal class FrameSerializer
     {
         public byte[] GetBytes(WebSocketFrame frame)
         {

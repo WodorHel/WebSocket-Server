@@ -4,7 +4,7 @@ using System.Net.Sockets;
 
 namespace WS.SocketServices
 {
-    class ConnectingService
+    internal class ConnectingService
     {
         public event EventHandler<ConnectedEventArgs> Connected;
         public event EventHandler<DisconnectedEventArgs> Disconnected;
@@ -14,6 +14,10 @@ namespace WS.SocketServices
             try
             {
                 server.BeginAccept(new AsyncCallback(AcceptNewConnection), server);
+            }
+            catch (ObjectDisposedException)
+            {
+                //Do nothing, socket is already closed by WebSocket server
             }
             catch (SocketException ex)
             {
@@ -30,6 +34,10 @@ namespace WS.SocketServices
             {
                 clientSocket = server.EndAccept(ar);
                 Connected(this, new ConnectedEventArgs(clientSocket));
+            }
+            catch (ObjectDisposedException)
+            {
+                //Do nothing, socket is already closed by WebSocket server
             }
             catch (SocketException ex)
             {

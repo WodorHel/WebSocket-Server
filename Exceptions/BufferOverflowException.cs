@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace WS.Exceptions
 {
     [Serializable]
-    class BufferOverflowException : Exception
+    public class BufferOverflowException : Exception
     {
         public BufferOverflowException()
         {

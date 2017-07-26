@@ -2,7 +2,7 @@
 
 namespace WS.CommandsExecutors.Executors
 {
-    class PingExecutor : ICommandExecutor
+    internal class PingExecutor : ICommandExecutor
     {
         public bool Do(WebSocketServer webSocketServer, string clientID, byte[] message)
         {

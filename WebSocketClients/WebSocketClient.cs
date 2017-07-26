@@ -1,49 +1,36 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 
 namespace WS.WebSocketClients
 {
-    class WebSocketClient
+    internal class WebSocketClient
     {
         public string ID { get; private set; }
+        public Socket Socket { get; private set; }
         public bool HandshakeDone { get; set; }
+        public Buffer Buffer { get; private set; }
+        public DateTime JoinTime { get; private set; }
 
-        byte[] _buffer;
-        int _bufferPointer;
-
-        public WebSocketClient(string id, int bufferSize)
+        public WebSocketClient(Socket socket, int bufferSize)
         {
-            ID = id;
-            _buffer = new byte[bufferSize];
-
-            _bufferPointer = 0;
+            ID = Guid.NewGuid().ToString();
+            Socket = socket;
+            Buffer = new Buffer(bufferSize);
+            JoinTime = DateTime.Now;
         }
 
-        public bool AddToBuffer(byte[] data)
+        public ClientInfo GetInfo()
         {
-            if (_bufferPointer + data.Length > _buffer.Length)
-                return false;
-
-            Array.Copy(data, 0, _buffer, _bufferPointer, data.Length);
-            _bufferPointer += data.Length;
-            return true;
-        }
-
-        public void RemoveFromBuffer(int length)
-        {
-            Array.Copy(_buffer, length, _buffer, 0, _buffer.Length - length);
-            _bufferPointer -= length;
-        }
-
-        public void ClearBuffer()
-        {
-            Array.Clear(_buffer, 0, _buffer.Length);
-            _bufferPointer = 0;
-        }
-
-        public byte[] GetBufferData()
-        {
-            return _buffer.Take(_bufferPointer).ToArray();
+            var removeEndpoint = ((IPEndPoint)this.Socket.RemoteEndPoint);
+            return new ClientInfo()
+            {
+                ClientID = this.ID,
+                IP = removeEndpoint.Address,
+                Port = removeEndpoint.Port,
+                JoinTime = this.JoinTime
+            };
         }
     }
 }
