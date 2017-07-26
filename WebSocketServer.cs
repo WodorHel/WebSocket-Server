@@ -23,7 +23,7 @@ namespace WS
         /// <summary>
         /// Buffer size for each client. Default is 8192
         /// </summary>
-        public int BufferSize { get; private set; }
+        public uint BufferSize { get; private set; }
 
         /// <summary>
         /// Event triggered when a new client has connected to the server
@@ -50,7 +50,7 @@ namespace WS
 
         }
 
-        public WebSocketServer(int bufferSize)
+        public WebSocketServer(uint bufferSize)
         {
             if (bufferSize <= 0)
                 throw new ArgumentOutOfRangeException("bufferSize", "Buffer size must be greater than zero.");

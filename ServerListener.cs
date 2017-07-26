@@ -18,7 +18,7 @@ namespace WS
         ReceivingDataService _receiveDataService;
         SendingDataService _sendDataService;
 
-        int _bufferSize;
+        uint _bufferSize;
         static ManualResetEvent _loopEvent;
 
         public event EventHandler<ConnectedEventArgs> ClientConnected;
@@ -28,7 +28,7 @@ namespace WS
         
         public EServerState ServerState { get; private set; }
 
-        public ServerListener(int bufferSize)
+        public ServerListener(uint bufferSize)
         {
             _bufferSize = bufferSize;
             _loopEvent = new ManualResetEvent(false);
@@ -82,8 +82,8 @@ namespace WS
 
         public void CloseConnection(Socket socket, Exception ex)
         {
-            socket.Shutdown(SocketShutdown.Both);
-            socket.Close();
+            //socket.Shutdown(SocketShutdown.Both);
+            //socket.Close();
 
             OnDisconnected(this, new DisconnectedEventArgs(socket, ex));
         }

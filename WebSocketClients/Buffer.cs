@@ -8,7 +8,7 @@ namespace WS.WebSocketClients
         byte[] _buffer;
         int _bufferPointer;
 
-        public Buffer(int bufferSize)
+        public Buffer(uint bufferSize)
         {
             _buffer = new byte[bufferSize];
             _bufferPointer = 0;
