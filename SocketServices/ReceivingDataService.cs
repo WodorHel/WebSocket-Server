@@ -25,10 +25,10 @@ namespace WS.SocketServices
                 clientSocket.BeginReceive(client.Buffer, 0, client.Buffer.Length, 0,
                                           new AsyncCallback(AcceptNewData), client);
             }
-           /// catch (ObjectDisposedException)
-           // {
+            catch (ObjectDisposedException)
+            {
                 //Do nothing, socket is already closed by WebSocket server
-          //  }
+            }
             catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(client.Socket, ex));
@@ -49,10 +49,10 @@ namespace WS.SocketServices
                 else
                     ReceivedData(this, new DataReceivedEventArgs(client.Socket, client.Buffer.Take(receivedBytes).ToArray()));
             }
-           // catch (ObjectDisposedException)
-          //  {
+            catch (ObjectDisposedException)
+            {
                 //Do nothing, socket is already closed by WebSocket server
-         //   }
+            }
             catch (SocketException ex)
             {
                 Disconnected(this, new DisconnectedEventArgs(client.Socket, ex));
